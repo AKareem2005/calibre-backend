@@ -1,12 +1,3 @@
-You are absolutely correct. `process.cwd()` can point to a different directory on Render, while `__dirname` always points to the exact location of `server.js`. Let me fix this with the proper path and debug logging.
-
-Here is the **final corrected `server.js`** with the fix:
-
----
-
-## ✅ Final `server.js` (Working Image Path + Debug)
-
-```javascript
 import express from "express";
 import nodemailer from "nodemailer";
 import cors from "cors";
@@ -243,58 +234,3 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-```
-
----
-
-## ✅ What Changed
-
-| Issue | Fix |
-|-------|-----|
-| `process.cwd()` may point to wrong directory | Changed to `__dirname` |
-| No debug information | Added `console.log` for image path and existence |
-| Image not showing | Now uses correct absolute path to `letterhead.png` |
-
----
-
-## ✅ How to Verify on Render
-
-After deployment, check your **Render logs**. You should see:
-
-```
-📁 Looking for image at: /opt/render/project/src/letterhead.png
-📁 File exists: true
-✅ Letterhead image added (full page)
-```
-
-If you see `File exists: false`, then `letterhead.png` is not in the correct folder in your GitHub repository.
-
----
-
-## ✅ Ensure `letterhead.png` is in the Right Place
-
-Your GitHub repository should have this structure:
-
-```
-your-repo/
-├── server.js
-├── letterhead.png    ← MUST be here (same folder as server.js)
-├── package.json
-└── ...
-```
-
----
-
-## ✅ Test Locally First
-
-Before deploying to Render, test locally:
-
-```bash
-node server.js
-```
-
-Then send a test request. Check if the PDF generates with the letterhead image.
-
----
-
-Deploy this updated `server.js` to Render. The image will now load correctly because `__dirname` always points to the exact location of `server.js`.
