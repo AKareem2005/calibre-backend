@@ -4,6 +4,11 @@ import cors from "cors";
 import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
+
+// ES module fix for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -41,10 +46,23 @@ app.post("/send-report", async (req, res) => {
 
     doc.pipe(stream);
 
+    // ===== ✅ BACKGROUND IMAGE (PERFECT FULL-PAGE FIT) =====
+    const bgPath = path.join(process.cwd(), "letterhead.png");
+
+    if (fs.existsSync(bgPath)) {
+      doc.image(bgPath, 0, 0, {
+        width: doc.page.width,
+        height: doc.page.height,
+      });
+      console.log("✅ Letterhead image added (full page)");
+    } else {
+      console.log("⚠️ letterhead.png not found");
+    }
+
     // ===== PROFESSIONAL PDF DESIGN =====
 
-    // Top spacing (avoid header overlap)
-    doc.moveDown(6);
+    // ✅ PRECISE POSITIONING (instead of moveDown)
+    doc.y = 180; // Push content exactly below header area
 
     // Title
     doc
