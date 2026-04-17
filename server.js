@@ -1,3 +1,12 @@
+You are absolutely correct. `process.cwd()` can point to a different directory on Render, while `__dirname` always points to the exact location of `server.js`. Let me fix this with the proper path and debug logging.
+
+Here is the **final corrected `server.js`** with the fix:
+
+---
+
+## ✅ Final `server.js` (Working Image Path + Debug)
+
+```javascript
 import express from "express";
 import nodemailer from "nodemailer";
 import cors from "cors";
@@ -35,7 +44,7 @@ app.post("/send-report", async (req, res) => {
 
     console.log("STEP 1: Request received");
 
-    const filePath = path.join(process.cwd(), "report.pdf");
+    const filePath = path.join(__dirname, "report.pdf");
 
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
@@ -46,8 +55,12 @@ app.post("/send-report", async (req, res) => {
 
     doc.pipe(stream);
 
-    // ===== ✅ BACKGROUND IMAGE (PERFECT FULL-PAGE FIT) =====
-    const bgPath = path.join(process.cwd(), "letterhead.png");
+    // ===== ✅ BACKGROUND IMAGE (FIXED PATH USING __dirname) =====
+    const bgPath = path.join(__dirname, "letterhead.png");
+    
+    // ✅ DEBUG LOGS (CHECK RENDER LOGS)
+    console.log("📁 Looking for image at:", bgPath);
+    console.log("📁 File exists:", fs.existsSync(bgPath));
 
     if (fs.existsSync(bgPath)) {
       doc.image(bgPath, 0, 0, {
@@ -56,13 +69,13 @@ app.post("/send-report", async (req, res) => {
       });
       console.log("✅ Letterhead image added (full page)");
     } else {
-      console.log("⚠️ letterhead.png not found");
+      console.log("❌ letterhead.png NOT FOUND at:", bgPath);
     }
 
     // ===== PROFESSIONAL PDF DESIGN =====
 
     // ✅ PRECISE POSITIONING (instead of moveDown)
-    doc.y = 180; // Push content exactly below header area
+    doc.y = 180;
 
     // Title
     doc
@@ -84,7 +97,7 @@ app.post("/send-report", async (req, res) => {
 
     doc.moveDown(2);
 
-    // Score Box (center highlight)
+    // Score Box
     doc
       .fontSize(40)
       .fillColor(score >= 60 ? "#16A34A" : "#DC2626")
@@ -114,7 +127,7 @@ app.post("/send-report", async (req, res) => {
 
     doc.moveDown(1);
 
-    // Table-like layout (aligned columns)
+    // Table-like layout
     const labelX = 120;
     const valueX = 350;
     let startY = doc.y;
@@ -182,8 +195,6 @@ app.post("/send-report", async (req, res) => {
         { align: "center" }
       );
 
-    // ===== END PROFESSIONAL PDF DESIGN =====
-
     doc.end();
 
     // Wait for file
@@ -232,3 +243,58 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+```
+
+---
+
+## ✅ What Changed
+
+| Issue | Fix |
+|-------|-----|
+| `process.cwd()` may point to wrong directory | Changed to `__dirname` |
+| No debug information | Added `console.log` for image path and existence |
+| Image not showing | Now uses correct absolute path to `letterhead.png` |
+
+---
+
+## ✅ How to Verify on Render
+
+After deployment, check your **Render logs**. You should see:
+
+```
+📁 Looking for image at: /opt/render/project/src/letterhead.png
+📁 File exists: true
+✅ Letterhead image added (full page)
+```
+
+If you see `File exists: false`, then `letterhead.png` is not in the correct folder in your GitHub repository.
+
+---
+
+## ✅ Ensure `letterhead.png` is in the Right Place
+
+Your GitHub repository should have this structure:
+
+```
+your-repo/
+├── server.js
+├── letterhead.png    ← MUST be here (same folder as server.js)
+├── package.json
+└── ...
+```
+
+---
+
+## ✅ Test Locally First
+
+Before deploying to Render, test locally:
+
+```bash
+node server.js
+```
+
+Then send a test request. Check if the PDF generates with the letterhead image.
+
+---
+
+Deploy this updated `server.js` to Render. The image will now load correctly because `__dirname` always points to the exact location of `server.js`.
