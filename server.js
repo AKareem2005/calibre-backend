@@ -10,7 +10,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ ENV (IMPORTANT FOR DEPLOYMENT)
+// ✅ Environment variables (set on Render)
 const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASS = process.env.EMAIL_PASS;
 
@@ -36,55 +36,135 @@ app.post("/send-report", async (req, res) => {
       fs.unlinkSync(filePath);
     }
 
-    const doc = new PDFDocument({ size: "A4" });
+    const doc = new PDFDocument({ size: "A4", margin: 50 });
     const stream = fs.createWriteStream(filePath);
 
     doc.pipe(stream);
 
-    // Background
-    const bgPath = path.join(process.cwd(), "letterhead.png");
-    if (fs.existsSync(bgPath)) {
-      doc.image(bgPath, 0, 0, { width: 595 });
-    }
+    // ===== PROFESSIONAL PDF DESIGN =====
+
+    // Top spacing (avoid header overlap)
+    doc.moveDown(6);
 
     // Title
-    doc.moveDown(10);
-    doc.fontSize(18).fillColor("black").text("OPERATIONAL RISK REPORT", { align: "center" });
+    doc
+      .fontSize(20)
+      .fillColor("#1E3A8A")
+      .text("Operational Risk Assessment Report", {
+        align: "center",
+      });
+
+    doc.moveDown(1);
+
+    // Subtitle
+    doc
+      .fontSize(12)
+      .fillColor("gray")
+      .text("Calibre Aviation – Ground Operations Analysis", {
+        align: "center",
+      });
 
     doc.moveDown(2);
-    doc.fontSize(28).fillColor("red").text(`${score}% (${riskLevel})`, { align: "center" });
+
+    // Score Box (center highlight)
+    doc
+      .fontSize(40)
+      .fillColor(score >= 60 ? "#16A34A" : "#DC2626")
+      .text(`${score}%`, { align: "center" });
+
+    doc
+      .fontSize(16)
+      .fillColor("black")
+      .text(riskLevel, { align: "center" });
 
     doc.moveDown(2);
 
-    // Content (clean spacing)
-    doc.fontSize(14).fillColor("black");
-
-    doc.text(`Turnaround Time: ${answers.q1} minutes`, { align: "center" });
-    doc.moveDown(0.5);
-
-    doc.text(`Staff Turnover: ${answers.q2}%`, { align: "center" });
-    doc.moveDown(0.5);
-
-    doc.text(`Training Days: ${answers.q3}`, { align: "center" });
-    doc.moveDown(0.5);
-
-    doc.text(`Delay Attribution: ${answers.q4}%`, { align: "center" });
-    doc.moveDown(0.5);
-
-    doc.text(`Overtime Hours: ${answers.q5}`, { align: "center" });
+    // Divider
+    doc
+      .moveTo(100, doc.y)
+      .lineTo(500, doc.y)
+      .strokeColor("#E5E7EB")
+      .stroke();
 
     doc.moveDown(1.5);
 
-    doc.fontSize(15).text("Recommendation:", { align: "center" });
+    // Section: Metrics Header
+    doc
+      .fontSize(16)
+      .fillColor("#1E3A8A")
+      .text("Operational Metrics", { align: "left" });
 
-    doc.moveDown(0.5);
+    doc.moveDown(1);
 
-    doc.fontSize(14).text(
-      score >= 60
-        ? "Moderate risk. Improve efficiency."
-        : "High risk. Immediate action required.",
-      { align: "center" }
-    );
+    // Table-like layout (aligned columns)
+    const labelX = 120;
+    const valueX = 350;
+    let startY = doc.y;
+
+    const metrics = [
+      ["Turnaround Time", `${answers.q1} minutes`],
+      ["Staff Turnover", `${answers.q2}%`],
+      ["Training Days", `${answers.q3}`],
+      ["Delay Attribution", `${answers.q4}%`],
+      ["Overtime Hours", `${answers.q5}`],
+    ];
+
+    metrics.forEach(([label, value], i) => {
+      doc
+        .fontSize(12)
+        .fillColor("black")
+        .text(label, labelX, startY + i * 20);
+
+      doc
+        .fontSize(12)
+        .fillColor("#374151")
+        .text(value, valueX, startY + i * 20);
+    });
+
+    doc.moveDown(6);
+
+    // Divider
+    doc
+      .moveTo(100, doc.y)
+      .lineTo(500, doc.y)
+      .strokeColor("#E5E7EB")
+      .stroke();
+
+    doc.moveDown(1.5);
+
+    // Recommendation Section
+    doc
+      .fontSize(16)
+      .fillColor("#1E3A8A")
+      .text("Recommendation", { align: "left" });
+
+    doc.moveDown(1);
+
+    doc
+      .fontSize(12)
+      .fillColor("black")
+      .text(
+        score >= 60
+          ? "Moderate operational risk detected. Focus on process optimization, workforce stabilization, and delay attribution accuracy."
+          : "High operational risk detected. Immediate intervention required in staffing, training, and turnaround efficiency to avoid operational disruptions.",
+        {
+          align: "justify",
+          lineGap: 4,
+        }
+      );
+
+    doc.moveDown(2);
+
+    // Footer Note
+    doc
+      .fontSize(10)
+      .fillColor("gray")
+      .text(
+        "This report is system-generated. For a detailed operational audit, contact Calibre Aviation Consulting.",
+        { align: "center" }
+      );
+
+    // ===== END PROFESSIONAL PDF DESIGN =====
 
     doc.end();
 
@@ -128,7 +208,7 @@ app.post("/send-report", async (req, res) => {
   }
 });
 
-// ✅ IMPORTANT (Render compatible)
+// ✅ PORT config (Render compatible)
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
